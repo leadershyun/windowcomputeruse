@@ -1,5 +1,4 @@
-import type { AgentAction, SessionState } from '@windowcomputeruse/shared';
-import type { WindowsRuntime } from '@windowcomputeruse/agent-core';
+import type { AgentAction, SessionState, WindowsRuntime } from '@windowcomputeruse/shared';
 import { ScreenCapture } from './screen-capture';
 import { InputController } from './input-controller';
 

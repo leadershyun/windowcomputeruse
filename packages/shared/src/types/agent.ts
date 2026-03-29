@@ -1,3 +1,5 @@
+import type { AgentAction } from './action';
+
 /** Overall status of an agent task */
 export type TaskStatus =
   | 'idle'
