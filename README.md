@@ -59,10 +59,52 @@ npm install
 npm run dev          # starts the Electron app in dev mode
 ```
 
-### Build & package as .exe
+### Build & package as .exe (local)
 ```bash
-npm run package      # produces release/WindowComputerUse-Setup-*.exe
+npm run package      # produces apps/desktop/release/WindowComputerUse-Setup-*.exe
+                     # (requires a Windows machine with npm install already run)
 ```
+
+---
+
+## Release Pipeline
+
+Releases are automated via **GitHub Actions** (`.github/workflows/release.yml`).  
+The workflow runs on a `windows-latest` runner, builds the Electron app with `electron-builder`,
+and uploads the resulting `.exe` installer to a **GitHub Release**.
+
+### How to generate a release
+
+#### Option A — Tag-based release (recommended)
+Push a semver tag to the repository.  The workflow triggers automatically:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions will:
+1. Install all workspace dependencies (`npm ci`)
+2. Build the Electron app and package it as a Windows installer (`npm run package`)
+3. Create a GitHub Release named `WindowComputerUse v1.0.0`
+4. Upload `WindowComputerUse-Setup-*.exe` and `WindowComputerUse-*.exe` (portable) as release assets
+
+#### Option B — Manual workflow dispatch
+1. Go to **Actions → Build & Release Windows App** in the GitHub repository
+2. Click **Run workflow**
+3. Optionally enter a version string (e.g. `v0.2.0-beta`); if left blank the tag of the current commit is used
+4. Click **Run workflow** to start the build
+
+### Where to find the .exe
+
+After the workflow completes:
+- **GitHub Releases** → `https://github.com/leadershyun/windowcomputeruse/releases`
+- Each release contains two assets:
+  - `WindowComputerUse-Setup-<version>-x64.exe` — NSIS installer (recommended)
+  - `WindowComputerUse-<version>-x64.exe` — portable executable (no install needed)
+
+> **Note:** Pre-release versions (tags containing a `-`, e.g. `v0.1.0-beta`) are automatically
+> marked as pre-release on GitHub.
 
 ---
 
@@ -122,17 +164,8 @@ Use `safeStorage` from Electron or OS keychain (e.g., `keytar`) to encrypt store
 ### 7. Human-in-the-loop approvals
 Add an approval step for dangerous actions (payment, deletion, etc.) via both the desktop UI and Discord confirmation buttons.
 
-### 8. Build pipeline
-Configure GitHub Actions for automated Windows builds:
-```yaml
-- uses: actions/checkout@v4
-- run: npm ci
-- run: npm run package -w apps/desktop
-- uses: actions/upload-artifact@v4
-  with:
-    name: windows-installer
-    path: apps/desktop/release/*.exe
-```
+### 8. ~~Build pipeline~~ ✅ Done
+`.github/workflows/release.yml` is already in place. See **Release Pipeline** above.
 
 ---
 
