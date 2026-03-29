@@ -1,0 +1,74 @@
+name: Build & Release Windows App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v0.1.0). Leave blank to use the tag on the current commit.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # needed to create GitHub Releases and upload assets
+
+jobs:
+  build-windows:
+    name: Build Windows .exe
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js setup ─────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install all workspace dependencies ────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Build & package as Windows .exe ───────────────────────────────
+      - name: Package Windows app
+        working-directory: apps/desktop
+        run: npm run package
+        env:
+          # Prevents electron-builder from trying to publish automatically
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 5. List produced artifacts (for debugging) ────────────────────────
+      - name: List release artifacts
+        shell: pwsh
+        run: Get-ChildItem -Recurse apps/desktop/release -Include *.exe | Select-Object FullName, Length
+
+      # ── 6. Determine release tag ──────────────────────────────────────────
+      - name: Determine release tag
+        id: tag
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.version }}" -ne "") {
+            echo "tag=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "tag=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          }
+
+      # ── 7. Upload installer to GitHub Releases ────────────────────────────
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: WindowComputerUse ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          generate_release_notes: true
+          files: |
+            apps/desktop/release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
